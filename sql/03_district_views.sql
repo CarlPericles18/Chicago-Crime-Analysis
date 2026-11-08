@@ -3,22 +3,22 @@
    ============================================================ */
 
 /* Slicer: district / year combinations */
-CREATE OR ALTER VIEW DISTRICT AS
+ALTER VIEW DISTRICT AS
 SELECT DISTINCT district, year
 FROM crime_analysis;
-GO
+
 
 /* ---------- Volume and ranking ---------- */
 
 /* How many crimes occurred in each district per year? */
-CREATE OR ALTER VIEW DISTRICT_count_year AS
+ALTER VIEW DISTRICT_count_year AS
 SELECT district, year, COUNT(*) AS Crime_total
 FROM crime_analysis
 GROUP BY district, year;
-GO
+
 
 /* How does each district rank against the others in the same year? */
-CREATE OR ALTER VIEW district_count_by_year AS
+CREATE VIEW district_count_by_year AS
 SELECT
     district,
     year,
@@ -26,9 +26,9 @@ SELECT
     RANK() OVER (PARTITION BY year ORDER BY COUNT(*) DESC) AS rnk
 FROM crime_analysis
 GROUP BY district, year;
-GO
 
-CREATE OR ALTER VIEW OVERVIEW_TOP_DISTICT_COUNT_BY_YEAR AS
+
+CREATE VIEW OVERVIEW_TOP_DISTICT_COUNT_BY_YEAR AS
 SELECT
     district,
     COUNT(*) AS cnt,
@@ -36,10 +36,10 @@ SELECT
     RANK() OVER (PARTITION BY year ORDER BY COUNT(*) DESC) AS rnks
 FROM crime_analysis
 GROUP BY district, year;
-GO
+
 
 /* Highest- and lowest-crime district each year */
-CREATE OR ALTER VIEW districts_highest_Crime_rate AS
+ALTER VIEW districts_highest_Crime_rate AS
 WITH CTE AS (
     SELECT COUNT(case_number) AS counts, district, year,
            RANK() OVER (PARTITION BY year ORDER BY COUNT(case_number) DESC) AS rnks
@@ -47,9 +47,9 @@ WITH CTE AS (
     GROUP BY district, year
 )
 SELECT district, counts, year FROM CTE WHERE rnks = 1;
-GO
 
-CREATE OR ALTER VIEW districts_lowest_Crime_rate AS
+
+ALTER VIEW districts_lowest_Crime_rate AS
 WITH CTE AS (
     SELECT COUNT(case_number) AS counts, district, year,
            RANK() OVER (PARTITION BY year ORDER BY COUNT(case_number) ASC) AS rnks
@@ -57,10 +57,10 @@ WITH CTE AS (
     GROUP BY district, year
 )
 SELECT district, counts, year FROM CTE WHERE rnks = 1;
-GO
+
 
 /* Running total of crimes per district over time */
-CREATE OR ALTER VIEW DISTRICT_Cumulative_Growth AS
+ALTER VIEW DISTRICT_Cumulative_Growth AS
 SELECT
     year,
     District,
@@ -69,10 +69,10 @@ SELECT
                         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_sum
 FROM crime_analysis
 GROUP BY year, District;
-GO
+
 
 /* Month-over-month crime trend per district */
-CREATE OR ALTER VIEW DISTRICT_MONTH_OVER_MONTH_CRIME AS
+ALTER VIEW DISTRICT_MONTH_OVER_MONTH_CRIME AS
 WITH CTE AS (
     SELECT
         DATEPART(MONTH, Date) AS months,
@@ -91,10 +91,10 @@ SELECT
         (cnt - LAG(cnt) OVER (PARTITION BY DISTRICT ORDER BY year, months)) * 100.0
         / LAG(cnt) OVER (PARTITION BY DISTRICT ORDER BY year, months), 0) AS M_O_M
 FROM CTE;
-GO
+
 
 /* How does each district compare to the citywide average? */
-CREATE OR ALTER VIEW DISTRICT_CRIME_COUNT_COMPARE_TO_AVG AS
+ALTER VIEW DISTRICT_CRIME_COUNT_COMPARE_TO_AVG AS
 WITH crime_total AS (
     SELECT district, COUNT(*) AS crime_count
     FROM crime_analysis
@@ -116,12 +116,12 @@ SELECT
     END AS comparison
 FROM crime_total ct
 CROSS JOIN city_avg ca;
-GO
+
 
 /* ---------- Crime types per district ---------- */
 
 /* Top 5 crime types per district per year */
-CREATE OR ALTER VIEW DISTRICT_NEW_TOP_10_PRIMARY_TYPE_PER_DISTRICT AS
+CREATE VIEW DISTRICT_NEW_TOP_10_PRIMARY_TYPE_PER_DISTRICT AS
 WITH CTE AS (
     SELECT Primary_Type, district, year, COUNT(*) AS cnt,
            RANK() OVER (PARTITION BY district, year ORDER BY COUNT(*) DESC) AS rnks
@@ -131,11 +131,11 @@ WITH CTE AS (
 SELECT primary_type, district, year, cnt
 FROM CTE
 WHERE rnks <= 5;
-GO
+
 
 /* ---------- Arrest and domestic rates per district ---------- */
 
-CREATE OR ALTER VIEW DISTRICT_ARREST_RATE AS
+CREATE VIEW DISTRICT_ARREST_RATE AS
 SELECT
     year,
     district,
@@ -143,10 +143,10 @@ SELECT
     COUNT(*) AS total_crimes
 FROM crime_analysis
 GROUP BY year, district;
-GO
+
 
 /* Which districts have an arrest rate above the citywide average? */
-CREATE OR ALTER VIEW districts_arrest_rate_above_city_avg AS
+ALTER VIEW districts_arrest_rate_above_city_avg AS
 WITH city AS (
     SELECT year, AVG(CAST(arrest AS FLOAT)) * 100 AS city_arrest_rate
     FROM crime_analysis
@@ -165,7 +165,7 @@ JOIN city c ON c.year = d.year
 WHERE d.district_arrest_rate > c.city_arrest_rate;
 GO
 
-CREATE OR ALTER VIEW DISTRICT_DOMESTIC_RATE AS
+CREATE VIEW DISTRICT_DOMESTIC_RATE AS
 SELECT
     year,
     district,
@@ -173,11 +173,11 @@ SELECT
     COUNT(*) AS total_crimes
 FROM crime_analysis
 GROUP BY year, district;
-GO
+
 
 /* ---------- Time of day per district ---------- */
 
-CREATE OR ALTER VIEW DISTRICT_HOURS_CRIME AS
+CREATE VIEW DISTRICT_HOURS_CRIME AS
 SELECT
     FORMAT(DATEADD(HOUR, DATEPART(HOUR, Date), 0), 'h:00 tt') AS hour_label,
     DATEPART(HOUR, Date) AS hr_sort,
@@ -190,7 +190,7 @@ GO
 
 /* ---------- Map ---------- */
 
-CREATE OR ALTER VIEW map_distict AS
+CREATE VIEW map_distict AS
 SELECT district, COUNT(*) AS cnt, year
 FROM crime_analysis
 GROUP BY district, year;
@@ -200,4 +200,4 @@ CREATE OR ALTER VIEW long_lat_year AS
 SELECT latitude, longitude, year,
        ROW_NUMBER() OVER (ORDER BY year) AS row_id   -- unique ID so Power BI plots every point
 FROM crime_analysis;
-GO
+
